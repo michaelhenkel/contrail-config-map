@@ -21,12 +21,15 @@ import (
         "time"
 	"fmt"
 	"net"
-        "net/url"
 	"strings"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
         "k8s.io/api/core/v1"
+        //k8s "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1alpha3"
+        //"github.com/davecgh/go-spew/spew"
+        "gopkg.in/yaml.v2"
+        //"github.com/ghodss/yaml"
 )
 
 
@@ -43,12 +46,14 @@ func createConfig() error{
 	  if err != nil {
   		panic(err.Error())
 	  }
+/*
           u, err := url.Parse(config.Host)
           host, port, _ := net.SplitHostPort(u.Host)
           fmt.Printf("Host: %s, Port: %s\n", host, port)
 	  if err != nil {
   		panic(err.Error())
 	  }
+*/
 	  clientset, err := kubernetes.NewForConfig(config)
 	  if err != nil {
   		panic(err.Error())
@@ -63,6 +68,28 @@ func createConfig() error{
                   masterNodes = append(masterNodes, element.Name)
           }
           fmt.Println(strings.Join(masterNodes,","))
+
+          kubeadmConfigMapClient := clientset.CoreV1().ConfigMaps("kube-system")
+          kcm, err := kubeadmConfigMapClient.Get("kubeadm-config", metav1.GetOptions{})
+          clusterConfig := kcm.Data["ClusterConfiguration"]
+          fmt.Printf("clusterConfig: %s", clusterConfig)
+          clusterConfigByte := []byte(clusterConfig)
+          clusterConfigMap := make(map[interface{}]interface{})
+          err = yaml.Unmarshal(clusterConfigByte, &clusterConfigMap)
+          if err != nil {
+            return err
+          }
+          controlPlaneEndpoint := clusterConfigMap["controlPlaneEndpoint"].(string)
+          controlPlaneEndpointHost, controlPlaneEndpointPort, _ := net.SplitHostPort(controlPlaneEndpoint)
+          clusterName := clusterConfigMap["clusterName"].(string)
+
+          networkConfig := make(map[interface{}]interface{})
+          networkConfig = clusterConfigMap["networking"].(map[interface{}]interface{})
+          fmt.Printf("networkConfig: %s\n", networkConfig["dnsDomain"])
+          //dnsDomain := networkConfig["dnsDomain"].(string)
+          podSubnet := networkConfig["podSubnet"].(string)
+          serviceSubnet := networkConfig["serviceSubnet"].(string)
+
           configMap := &v1.ConfigMap{
               ObjectMeta: metav1.ObjectMeta{
                   Name: "contrailcontrollernodes",
@@ -70,10 +97,14 @@ func createConfig() error{
               },
               Data: map[string]string{
                   "CONTROLLER_NODES": strings.Join(masterNodes,","),
-                  "KUBERNETES_API_SERVER": host,
-                  "KUBERNETES_API_SECURE_PORT": port,
+                  "KUBERNETES_API_SERVER": controlPlaneEndpointHost,
+                  "KUBERNETES_API_SECURE_PORT": controlPlaneEndpointPort,
+                  "KUBERNETES_POD_SUBNETS": podSubnet,
+                  "KUBERNETES_SERVICE_SUBNETS": serviceSubnet,
+                  "KUBERNETES_CLUSTER_NAME": clusterName,
               },
           }
+
           configMapClient := clientset.CoreV1().ConfigMaps("contrail")
           cm, err := configMapClient.Get("contrailcontrollernodes", metav1.GetOptions{})
           if err != nil {
