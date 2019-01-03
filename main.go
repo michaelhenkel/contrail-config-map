@@ -60,7 +60,6 @@ func createConfig() error{
           kubeadmConfigMapClient := clientset.CoreV1().ConfigMaps("kube-system")
           kcm, err := kubeadmConfigMapClient.Get("kubeadm-config", metav1.GetOptions{})
           clusterConfig := kcm.Data["ClusterConfiguration"]
-          fmt.Printf("clusterConfig: %s", clusterConfig)
           clusterConfigByte := []byte(clusterConfig)
           clusterConfigMap := make(map[interface{}]interface{})
           err = yaml.Unmarshal(clusterConfigByte, &clusterConfigMap)

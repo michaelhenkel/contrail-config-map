@@ -1,5 +1,5 @@
 FROM alpine:3.8 as builder
-
+ARG source=remote
 RUN apk add --no-cache \
 		ca-certificates
 
@@ -65,7 +65,7 @@ WORKDIR $GOPATH
 RUN mkdir -p /tmp/contrail-k8s-init/
 RUN go get k8s.io/client-go/...
 RUN go get github.com/michaelhenkel/contrail-k8s-init
-RUN go get github.com/ghodss/yaml
+#RUN if [ "$source" = "local" ]; then cp /tmp/contrail-k8s-init/*.go src/github.com/michaelhenkel/contrail-k8s-init/;fi
 RUN go build -o /tmp/contrail-k8s-init/contrail-k8s-init github.com/michaelhenkel/contrail-k8s-init
 #ENTRYPOINT ["go","build"]
 #CMD ["-o","/tmp/contrail-k8s-init/contrail-k8s-init","github.com/michaelhenkel/contrail-k8s-init"]
