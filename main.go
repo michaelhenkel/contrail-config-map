@@ -26,10 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
         "k8s.io/api/core/v1"
-        //k8s "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1alpha3"
-        //"github.com/davecgh/go-spew/spew"
         "gopkg.in/yaml.v2"
-        //"github.com/ghodss/yaml"
 )
 
 
@@ -44,19 +41,11 @@ func createConfig() error{
         return retry(10, time.Second, func() error {
 	  config, err := rest.InClusterConfig()
 	  if err != nil {
-  		panic(err.Error())
+		panic(err.Error())
 	  }
-/*
-          u, err := url.Parse(config.Host)
-          host, port, _ := net.SplitHostPort(u.Host)
-          fmt.Printf("Host: %s, Port: %s\n", host, port)
-	  if err != nil {
-  		panic(err.Error())
-	  }
-*/
 	  clientset, err := kubernetes.NewForConfig(config)
 	  if err != nil {
-  		panic(err.Error())
+		panic(err.Error())
 	  }
           nodeList, err := clientset.CoreV1().Nodes().List(
                     metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/master=",})
@@ -67,7 +56,6 @@ func createConfig() error{
           for _, element := range nodeList.Items {
                   masterNodes = append(masterNodes, element.Name)
           }
-          fmt.Println(strings.Join(masterNodes,","))
 
           kubeadmConfigMapClient := clientset.CoreV1().ConfigMaps("kube-system")
           kcm, err := kubeadmConfigMapClient.Get("kubeadm-config", metav1.GetOptions{})
@@ -85,8 +73,6 @@ func createConfig() error{
 
           networkConfig := make(map[interface{}]interface{})
           networkConfig = clusterConfigMap["networking"].(map[interface{}]interface{})
-          fmt.Printf("networkConfig: %s\n", networkConfig["dnsDomain"])
-          //dnsDomain := networkConfig["dnsDomain"].(string)
           podSubnet := networkConfig["podSubnet"].(string)
           serviceSubnet := networkConfig["serviceSubnet"].(string)
 
