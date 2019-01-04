@@ -59,5 +59,5 @@ RUN go get github.com/michaelhenkel/contrail-k8s-init
 RUN go build -o /tmp/contrail-k8s-init/contrail-k8s-init github.com/michaelhenkel/contrail-k8s-init
 
 FROM alpine:3.8
-COPY --from=1 /tmp/contrail-k8s-init/contrail-k8s-init /
+COPY --from=builder /tmp/contrail-k8s-init/contrail-k8s-init /
 CMD ["/contrail-k8s-init"]
