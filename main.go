@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+        "os"
+        "io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -32,6 +34,11 @@ func main(){
 
 func createConfig() error{
         return retry(10, time.Second, func() error {
+          nameSpaceByte, err := ioutil.ReadFile("/run/secrets/kubernetes.io/serviceaccount/namespace")
+          if err != nil {
+                panic(err.Error())
+          }
+          nameSpace := string(nameSpaceByte)
 	  config, err := rest.InClusterConfig()
 	  if err != nil {
 		panic(err.Error())
@@ -71,7 +78,7 @@ func createConfig() error{
           configMap := &v1.ConfigMap{
               ObjectMeta: metav1.ObjectMeta{
                   Name: "contrailcontrollernodes",
-                  Namespace: "contrail",
+                  Namespace: nameSpace,
               },
               Data: map[string]string{
                   "CONTROLLER_NODES": strings.Join(masterNodes,","),
@@ -83,7 +90,7 @@ func createConfig() error{
               },
           }
 
-          configMapClient := clientset.CoreV1().ConfigMaps("contrail")
+          configMapClient := clientset.CoreV1().ConfigMaps(nameSpace)
           cm, err := configMapClient.Get("contrailcontrollernodes", metav1.GetOptions{})
           if err != nil {
             configMapClient.Create(configMap)
